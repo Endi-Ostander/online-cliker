@@ -23,7 +23,7 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Install dependencies and set Java 17 default
+    - name: Install dependencies and set Java 17
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -63,6 +63,7 @@ jobs:
 
         wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
         unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
+        rm cmdline-tools.zip
 
         if [ -d "$HOME/android-sdk/cmdline-tools/cmdline-tools" ]; then
           mkdir -p $HOME/android-sdk/cmdline-tools/latest
@@ -72,8 +73,15 @@ jobs:
           mv $HOME/android-sdk/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
         fi
 
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2"
 
+        # Принудительное принятие всех лицензий
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
+
+        # Скачиваем NDK r25b
         mkdir -p $HOME/.buildozer/android/platform
         wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O android-ndk.zip
         unzip -q android-ndk.zip -d $HOME/.buildozer/android/platform/
@@ -87,4 +95,3 @@ jobs:
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/33.0.2:$PATH
         buildozer -v android debug
-
