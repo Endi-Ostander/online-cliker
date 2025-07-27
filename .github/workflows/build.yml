@@ -23,7 +23,7 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Install dependencies
+    - name: Install dependencies and set Java 17 default
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -45,12 +45,18 @@ jobs:
           libncurses5-dev \
           libtinfo5 \
           wget
+
+        # Установим Java 17 как java/javac по умолчанию (чтобы sdkmanager запускался с нужной версией)
+        sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1710
+        sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 1710
+        sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+        sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
+
         pip install --upgrade pip
         pip install cython buildozer
 
     - name: Set JAVA_HOME
       run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
-
 
     - name: Install Android SDK Build-tools (including aidl)
       run: |
