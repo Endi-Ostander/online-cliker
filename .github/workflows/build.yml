@@ -1,9 +1,14 @@
-name: Build APK with Buildozer 
+name: Build APK with Buildozer
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+env:
+  BUILDOZER_ALLOW_ROOT: 1
+  LANG: en_US.UTF-8
+  LC_ALL: en_US.UTF-8
 
 jobs:
   build:
@@ -42,5 +47,12 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install buildozer
 
+    - name: Initialize buildozer
+      run: |
+        buildozer init || true
+        cp buildozer.spec buildozer.spec
+
     - name: Build APK
-      run: buildozer -v android debug
+      run: |
+        buildozer android debug
+
