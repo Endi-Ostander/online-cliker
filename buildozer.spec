@@ -13,7 +13,8 @@ requirements = python3,kivy,requests
 
 android.api = 33
 android.minapi = 21
-android.ndk = 25b
+android.ndk = 25.1.8937393
+android.build_tools_version = 33.0.2
 android.archs = armeabi-v7a
 
 android.permissions = INTERNET
