@@ -18,8 +18,8 @@ android.archs = armeabi-v7a
 android.permissions = INTERNET
 
 # (можно убрать или указать реальные файлы)
-icon.filename =
-presplash.filename =
+#icon.filename =
+#presplash.filename =
 
 # Уровень логов
 log_level = 2
