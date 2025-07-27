@@ -27,7 +27,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          openjdk-11-jdk \
+          openjdk-17-jdk \
           python3-pip \
           python3-setuptools \
           git \
@@ -47,6 +47,10 @@ jobs:
           wget
         pip install --upgrade pip
         pip install cython buildozer
+
+    - name: Set JAVA_HOME
+      run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
+
 
     - name: Install Android SDK Build-tools (including aidl)
       run: |
