@@ -45,7 +45,8 @@ jobs:
           libncurses5-dev \
           libtinfo5
         python3 -m pip install --upgrade pip
-        python3 -m pip install buildozer
+        python3 -m pip install buildozer cython
+
 
     
     - name: Build APK
