@@ -46,7 +46,9 @@ jobs:
           libncurses5 \
           libncurses5-dev \
           libtinfo5 \
-          wget
+          wget \
+          tar
+
         pip install --upgrade pip
         pip install cython buildozer
 
@@ -54,8 +56,9 @@ jobs:
       run: |
         mkdir -p $ANDROID_HOME/cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-        unzip cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+        unzip cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/tmp
+        mv $ANDROID_HOME/cmdline-tools/tmp/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+        rm -rf $ANDROID_HOME/cmdline-tools/tmp
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
           "platform-tools" "platforms;android-33" "build-tools;33.0.2"
