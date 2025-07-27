@@ -44,8 +44,9 @@ jobs:
           libncurses5 \
           libncurses5-dev \
           libtinfo5
-        python3 -m pip install --upgrade pip
+        pip install --upgrade pip
         pip install cython buildozer
 
-    - name: Build APK (first run triggers download of SDK/NDK)
-      run: buildozer -v android debug
+    - name: Build APK
+      run: |
+        buildozer -v android debug
