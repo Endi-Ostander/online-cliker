@@ -46,7 +46,7 @@ jobs:
           libtinfo5 \
           wget
 
-        # Установим Java 17 как java/javac по умолчанию (чтобы sdkmanager запускался с нужной версией)
+        # Устанавливаем Java 17 по умолчанию (чтобы sdkmanager запускался с нужной версией)
         sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1710
         sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 1710
         sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
@@ -58,16 +58,15 @@ jobs:
     - name: Set JAVA_HOME
       run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
 
-    - name: Install Android SDK Build-tools (including aidl)
+    - name: Install Android SDK Build-tools and NDK manually
       run: |
         mkdir -p $HOME/android-sdk
 
+        # Скачиваем и распаковываем Android cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-        unzip cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
+        unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
 
-        echo "Содержимое $HOME/android-sdk/cmdline-tools после распаковки:"
-        ls -la $HOME/android-sdk/cmdline-tools/
-
+        # Перемещаем содержимое cmdline-tools в папку latest
         if [ -d "$HOME/android-sdk/cmdline-tools/cmdline-tools" ]; then
           mkdir -p $HOME/android-sdk/cmdline-tools/latest
           mv $HOME/android-sdk/cmdline-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
@@ -76,8 +75,16 @@ jobs:
           mv $HOME/android-sdk/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
         fi
 
+        # Устанавливаем необходимые SDK компоненты
         yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2" "tools"
 
+        # Скачиваем и распаковываем Android NDK вручную (версия 25b)
+        mkdir -p $HOME/.buildozer/android/platform
+        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O android-ndk.zip
+        unzip -q android-ndk.zip -d $HOME/.buildozer/android/platform/
+        rm android-ndk.zip
+
+        # Добавляем переменные окружения для SDK
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
         echo "PATH=$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
 
