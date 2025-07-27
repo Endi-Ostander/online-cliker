@@ -29,10 +29,10 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          tar \    
+          tar \
           openjdk-11-jdk \
           python3-pip \
-          python3-setuptools \   
+          python3-setuptools \
           git \
           zip \
           unzip \
@@ -47,7 +47,7 @@ jobs:
           libncurses5 \
           libncurses5-dev \
           libtinfo5 \
-          wget \
+          wget
 
         pip install --upgrade pip
         pip install cython buildozer
