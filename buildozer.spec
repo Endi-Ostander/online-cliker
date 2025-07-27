@@ -3,6 +3,7 @@
 title = ClickerGame
 package.name = clickergame
 package.domain = org.example
+source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 orientation = portrait
@@ -37,7 +38,6 @@ log_level = 2
 android.permissions = INTERNET
 
 # Путь к главному файлу (если не main.py)
-# source.dir = .
 # source.include_patterns =
 
 # (опционально) сжатие
