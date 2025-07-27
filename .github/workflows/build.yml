@@ -1,9 +1,9 @@
 name: Build APK with Buildozer
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 env:
   BUILDOZER_ALLOW_ROOT: 1
@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
@@ -31,8 +31,8 @@ jobs:
           python3-pip \
           python3-setuptools \
           git \
-          unzip \
           zip \
+          unzip \
           libssl-dev \
           libffi-dev \
           libsqlite3-dev \
@@ -45,20 +45,7 @@ jobs:
           libncurses5-dev \
           libtinfo5
         python3 -m pip install --upgrade pip
-        python3 -m pip install buildozer cython
+        pip install cython buildozer
 
-    - name: First Buildozer run to initialize SDK
-      run: |
-        buildozer android clean || true
-        buildozer android debug || true
-
-    - name: Accept Android SDK licenses
-      run: |
-        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-        yes | sdkmanager --licenses || true
-        yes | sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
-
-    - name: Final Build
+    - name: Build APK (first run triggers download of SDK/NDK)
       run: buildozer -v android debug
-
