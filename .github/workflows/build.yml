@@ -9,6 +9,8 @@ env:
   BUILDOZER_ALLOW_ROOT: 1
   LANG: en_US.UTF-8
   LC_ALL: en_US.UTF-8
+  ANDROID_HOME: $HOME/android-sdk
+  PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:$PATH
 
 jobs:
   build:
@@ -23,11 +25,11 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Install dependencies and set Java 17
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          openjdk-17-jdk \
+          openjdk-11-jdk \
           python3-pip \
           python3-setuptools \
           git \
@@ -45,53 +47,28 @@ jobs:
           libncurses5-dev \
           libtinfo5 \
           wget
-
-        sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1710
-        sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 1710
-        sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-        sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
-
         pip install --upgrade pip
         pip install cython buildozer
 
-    - name: Set JAVA_HOME
-      run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
-
-    - name: Install Android SDK Build-tools and NDK manually
+    - name: Install Android SDK + Build Tools 33
       run: |
-        mkdir -p $HOME/android-sdk
-
+        mkdir -p $ANDROID_HOME/cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
-        rm cmdline-tools.zip
+        unzip cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+          "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-        if [ -d "$HOME/android-sdk/cmdline-tools/cmdline-tools" ]; then
-          mkdir -p $HOME/android-sdk/cmdline-tools/latest
-          mv $HOME/android-sdk/cmdline-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
-          rm -rf $HOME/android-sdk/cmdline-tools/cmdline-tools
-        else
-          mv $HOME/android-sdk/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-        fi
-
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
-          "platform-tools" \
-          "platforms;android-33" \
-          "build-tools;33.0.2"
-
-        # Принудительное принятие всех лицензий
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
-
-        # Скачиваем NDK r25b
-        mkdir -p $HOME/.buildozer/android/platform
-        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O android-ndk.zip
-        unzip -q android-ndk.zip -d $HOME/.buildozer/android/platform/
-        rm android-ndk.zip
-
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "PATH=$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
+    - name: Install Android NDK manually
+      run: |
+        mkdir -p $ANDROID_HOME/ndk
+        cd $ANDROID_HOME/ndk
+        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ndk.zip
+        unzip ndk.zip
+        mv android-ndk-r25b r25b
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/r25b" >> $GITHUB_ENV
 
     - name: Build APK
       run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/33.0.2:$PATH
-        buildozer -v android debug
+        buildozer android debug
