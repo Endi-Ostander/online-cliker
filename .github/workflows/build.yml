@@ -30,6 +30,7 @@ jobs:
           openjdk-11-jdk \
           python3-pip \
           python3-setuptools \
+          python3-dev \
           git \
           zip \
           unzip \
@@ -47,7 +48,7 @@ jobs:
           wget
         pip install --upgrade pip
         pip install cython buildozer
-        
+
     - name: Install Android SDK Build-tools (including aidl)
       run: |
         mkdir -p $HOME/android-sdk
@@ -57,11 +58,12 @@ jobs:
         mv $HOME/android-sdk/cmdline-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
         rm -rf $HOME/android-sdk/cmdline-tools/cmdline-tools
         yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2" "tools"
-        echo "export ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "export PATH=$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:$PATH" >> $GITHUB_ENV
 
     - name: Build APK
-      run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/33.0.2:$PATH
-        buildozer -v android debug
+      env:
+        ANDROID_HOME: ${{ env.HOME }}/android-sdk
+        PATH: ${{ env.HOME }}/android-sdk/platform-tools:${{ env.HOME }}/android-sdk/build-tools/33.0.2:${{ env.PATH }}
+      run: buildozer -v android debug
