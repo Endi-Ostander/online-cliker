@@ -47,11 +47,7 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install buildozer
 
-    - name: Initialize buildozer
-      run: |
-        buildozer init || true
-        cp buildozer.spec buildozer.spec
-
+    
     - name: Build APK
       run: buildozer -v android debug
 
