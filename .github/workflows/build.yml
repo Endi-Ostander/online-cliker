@@ -48,7 +48,6 @@ jobs:
           libncurses5-dev \
           libtinfo5 \
           wget \
-          tar
 
         pip install --upgrade pip
         pip install cython buildozer
