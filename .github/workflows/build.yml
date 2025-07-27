@@ -53,6 +53,5 @@ jobs:
         cp buildozer.spec buildozer.spec
 
     - name: Build APK
-      run: |
-        buildozer android debug
+      run: buildozer -v android debug
 
