@@ -13,6 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Clean existing files
+        run: |
+          rm -f buildozer.spec
+          rm -rf .buildozer bin
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -52,16 +57,13 @@ jobs:
           pip install --upgrade pip setuptools virtualenv
           pip install buildozer cython==0.29.36 kivy==2.3.0
 
-      - name: Accept Android licenses
+      - name: Initialize Buildozer
         run: |
-          mkdir -p ~/.android/licenses
-          echo "d56f5187479451eabf01fd78e6e452a9cf6d38f9" > ~/.android/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/intel-android-extra-license
+          buildozer init
+          [ -f buildozer.spec ] && echo "Buildozer initialized successfully" || exit 1
 
       - name: Configure Buildozer
         run: |
-          buildozer init
           cat <<EOT > buildozer.spec
           [app]
           title = Online Clicker
@@ -85,6 +87,13 @@ jobs:
           android.accept_sdk_license = True
           EOT
 
+      - name: Accept Android licenses
+        run: |
+          mkdir -p ~/.android/licenses
+          echo "d56f5187479451eabf01fd78e6e452a9cf6d38f9" > ~/.android/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/intel-android-extra-license
+
       - name: Install Android tools
         run: |
           export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
@@ -95,24 +104,30 @@ jobs:
         run: |
           export PATH=$PATH:~/.local/bin/:$HOME/.buildozer/android/platform/android-sdk/platform-tools
           buildozer android clean
-          buildozer -v android debug 2>&1 | tee build.log
-          [ -f bin/*.apk ] && cp bin/*.apk clicker-app.apk || echo "No APK found"
+          buildozer -v android debug
+          find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
+
+      - name: Verify APK
+        run: |
+          if [ -f clicker-app.apk ]; then
+            echo "APK generated successfully"
+            ls -lh clicker-app.apk
+          else
+            echo "APK generation failed"
+            ls -la bin/
+            exit 1
+          fi
 
       - name: Upload APK
-        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: clicker-apk
           path: clicker-app.apk
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 5
 
-      - name: Debug info
+      - name: Show build logs
         if: always()
         run: |
-          echo "### Build logs ###"
+          echo "### Last 100 lines of build log ###"
           tail -n 100 build.log || true
-          echo "### Bin contents ###"
-          ls -la bin/ || true
-          echo "### Buildozer info ###"
-          buildozer --version || true
