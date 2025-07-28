@@ -1,23 +1,14 @@
 [app]
-title = ClickerGame
-package.name = clickergame
+title = Online Clicker
+package.name = onlineclicker
 package.domain = org.example
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
-version = 0.1
+version = 1.0
+requirements = python3,kivy,requests
 orientation = portrait
 fullscreen = 0
-window = auto
-
-requirements = python3,kivy,requests
-
-android.api = 33
-android.minapi = 21
-android.ndk = 25.1.8937393
-android.build_tools_version = 33.0.2
-android.archs = armeabi-v7a
-
+android.arch = arm64-v8a
 android.permissions = INTERNET
-
-log_level = 2
-
+android.api = 34
+android.minapi = 21
+p4a.branch = master
