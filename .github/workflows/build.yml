@@ -76,26 +76,45 @@ jobs:
           android.accept_sdk_license = True
           EOT
 
-      - name: Install Android Command Line Tools
+      - name: Install Android SDK
         run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk/cmdline-tools
+          # Create Android SDK directory
+          mkdir -p $HOME/android-sdk
+          
+          # Download and install command line tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip commandlinetools-linux-11076708_latest.zip -d $HOME/android-sdk/cmdline-tools
           mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          
+          # Set environment variables
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
 
-      - name: Accept licenses and install SDK
+      - name: Accept Android licenses
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-34"
-          sdkmanager --update
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+
+      - name: Install Android tools
+        run: |
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+            "platform-tools" \
+            "build-tools;34.0.0" \
+            "platforms;android-34" \
+            "emulator" \
+            "patcher;v4"
 
       - name: Build APK
         run: |
-          export PATH=$PATH:$HOME/android-sdk/platform-tools
+          # Set environment variables for Buildozer
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          export ANDROID_NDK_HOME=$HOME/android-sdk/ndk/25.2.9519653
+          
+          # Run Buildozer
           buildozer android clean
           buildozer -v android debug
+          
+          # Find and copy APK
           find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
 
       - name: Verify APK
