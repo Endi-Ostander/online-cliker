@@ -82,13 +82,17 @@ jobs:
           echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
 
-      - name: Initialize python-for-android
+      - name: Setup Python-for-Android
         run: |
-          mkdir -p ~/.buildozer/android/platform/python-for-android
-          git clone https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
-          cd ~/.buildozer/android/platform/python-for-android
+          # Create the directory where buildozer expects p4a
+          mkdir -p $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
+          git clone https://github.com/kivy/python-for-android.git $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
+          cd $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
           git checkout develop
           pip install -e .
+          
+          # Also install in the global site-packages for good measure
+          pip install python-for-android
 
       - name: Build APK
         run: |
@@ -96,6 +100,10 @@ jobs:
           export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_NDK_HOME
+          
+          # Ensure p4a is in the correct location
+          mkdir -p $BUILD_DIR/.buildozer/android/platform/python-for-android
+          [ -d "$BUILD_DIR/.buildozer/android/platform/python-for-android" ] || exit 1
           
           cd $BUILD_DIR
           buildozer -v android clean
