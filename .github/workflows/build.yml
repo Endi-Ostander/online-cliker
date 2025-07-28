@@ -7,140 +7,56 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clean workspace
+      - name: Build with Docker
         run: |
-          rm -f buildozer.spec
-          rm -rf .buildozer bin
+          # Создаем временный Dockerfile
+          cat <<EOT > Dockerfile
+          FROM kivy/buildozer:latest
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          # Копируем исходный код
+          COPY . /app
+          WORKDIR /app
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            python3-pip \
-            zlib1g-dev \
-            libncurses-dev \
-            libtinfo6 \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            git \
-            autoconf \
-            libtool \
-            pkg-config \
-            wget \
-            automake \
-            gettext \
-            patchelf
+          # Устанавливаем зависимости Python
+          RUN pip install requests kivy==2.3.0
 
-      - name: Install Buildozer
-        run: |
-          pip install --upgrade pip setuptools virtualenv
-          pip install buildozer cython==0.29.36 kivy==2.3.0
+          # Создаем buildozer.spec
+          RUN echo "\
+          [app]\n\
+          title = Online Clicker\n\
+          package.name = onlineclicker\n\
+          package.domain = org.example\n\
+          source.dir = .\n\
+          version = 1.0\n\
+          requirements = python3,kivy==2.3.0,requests\n\
+          orientation = portrait\n\
+          fullscreen = 0\n\
+          android.archs = arm64-v8a\n\
+          android.permissions = INTERNET\n\
+          android.minapi = 21\n\
+          android.api = 34\n\
+          " > buildozer.spec
 
-      - name: Initialize Buildozer
-        run: |
-          buildozer init
-          [ -f buildozer.spec ] || exit 1
-
-      - name: Configure Buildozer
-        run: |
-          cat <<EOT > buildozer.spec
-          [app]
-          title = Online Clicker
-          package.name = onlineclicker
-          package.domain = org.example
-          source.dir = .
-          version = 1.0
-          requirements = python3,kivy==2.3.0,requests
-          orientation = portrait
-          fullscreen = 0
-          android.archs = arm64-v8a
-          android.permissions = INTERNET
-          android.minapi = 21
-          android.api = 34
-          android.build_tools_version = 34.0.0
-          p4a.branch = develop
-          android.accept_sdk_license = True
-          # Решение проблемы с libffi
-          p4a.options = --ignore-setup-py --sdk-dir=$HOME/android-sdk --ndk-dir=$HOME/android-sdk/ndk/25.2.9519653
-          log_level = 2
+          # Собираем APK
+          RUN buildozer android debug
           EOT
 
-      - name: Install Android SDK
-        run: |
-          mkdir -p $HOME/android-sdk
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip commandlinetools-linux-11076708_latest.zip -d $HOME/android-sdk/cmdline-tools
-          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-
-      - name: Accept Android licenses
-        run: |
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-
-      - name: Install Android tools
-        run: |
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
-            "platform-tools" \
-            "build-tools;34.0.0" \
-            "platforms;android-34" \
-            "emulator"
-
-      - name: Install Android NDK
-        run: |
-          mkdir -p $HOME/android-sdk/ndk
-          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
-          unzip android-ndk-r25c-linux.zip -d $HOME/android-sdk/ndk
-          mv $HOME/android-sdk/ndk/android-ndk-r25c $HOME/android-sdk/ndk/25.2.9519653
-          echo "ANDROID_NDK_HOME=$HOME/android-sdk/ndk/25.2.9519653" >> $GITHUB_ENV
-
-      - name: Build APK
-        run: |
-          export PATH=$PATH:$HOME/android-sdk/platform-tools
-          
-          # Явное указание путей для Python-for-Android
-          export ANDROIDSDK="$HOME/android-sdk"
-          export ANDROIDNDK="$HOME/android-sdk/ndk/25.2.9519653"
-          
-          # Скачивание и установка libffi 3.3
-          wget https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz
-          tar xzf libffi-3.3.tar.gz
-          cd libffi-3.3
-          ./configure --prefix=/usr --disable-docs
-          make
-          sudo make install
-          cd ..
-          
-          buildozer -v android debug
-          find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
+          # Собираем и запускаем контейнер
+          docker build -t kivy-builder .
+          docker run --rm -v $PWD:/host kivy-builder sh -c "cp bin/*.apk /host/clicker-app.apk"
 
       - name: Verify APK
         run: |
           if [ -f clicker-app.apk ]; then
             echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
-            # Оптимизация APK
-            zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
-            mv clicker-app-aligned.apk clicker-app.apk
           else
             echo "APK generation failed!"
-            echo "Listing build directory:"
-            ls -la bin/ || true
-            echo "Buildozer log:"
-            tail -n 500 buildozer.log || true
             exit 1
           fi
 
