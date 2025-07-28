@@ -52,42 +52,59 @@ jobs:
           android.minapi = 21
           android.api = 34
           android.ndk = 25b
-          p4a.branch = master
+          p4a.branch = develop
           android.accept_sdk_license = True
           log_level = 2
           EOT
 
-      - name: Setup Android SDK and NDK
+      - name: Setup Android environment
         run: |
+          # Create necessary directories
           mkdir -p ~/.buildozer/android/platform
-          cd ~/.buildozer/android/platform
           
           # Download and extract NDK
+          cd ~/.buildozer/android/platform
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip -q android-ndk-r25b-linux.zip
           rm android-ndk-r25b-linux.zip
           
-          # Download and extract Command Line Tools
+          # Setup SDK
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          cd ~/.buildozer/android/platform/android-sdk
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip -d cmdline-tools
+          unzip -q commandlinetools-linux-9477386_latest.zip
           rm commandlinetools-linux-9477386_latest.zip
-          mv cmdline-tools/cmdline-tools cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/
           
-          # Accept licenses
-          yes | ~/.buildozer/android/platform/cmdline-tools/latest/bin/sdkmanager --licenses
-          
-          # Install required platforms and build-tools
-          ~/.buildozer/android/platform/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          # Accept licenses and install components
+          yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
           
           # Set environment variables
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/.buildozer/android/platform/cmdline-tools/latest/bin:$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+
+      - name: Initialize python-for-android
+        run: |
+          # Create p4a directory structure
+          mkdir -p ~/.buildozer/android/platform/python-for-android
+          git clone https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
+          cd ~/.buildozer/android/platform/python-for-android
+          git checkout develop
+          pip install -e .
 
       - name: Build APK
         run: |
+          # Set buildozer environment
+          export BUILD_DIR=$GITHUB_WORKSPACE
+          export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+          export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
+          
           # Build the APK
+          cd $BUILD_DIR
           buildozer -v android clean
           buildozer -v android debug
           
@@ -106,7 +123,7 @@ jobs:
           if [ -f clicker-app.apk ]; then
             echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
             # Optimize APK
-            zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
+            $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
             mv clicker-app-aligned.apk clicker-app.apk
           else
             echo "No APK found to optimize!"
