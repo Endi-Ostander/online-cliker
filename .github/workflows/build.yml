@@ -45,14 +45,10 @@ jobs:
             automake \
             gettext
 
-      - name: Install Buildozer with fixes
+      - name: Install Buildozer
         run: |
           pip install --upgrade pip setuptools virtualenv
-          pip install cython==0.29.36 kivy==2.3.0
-          
-          # Устанавливаем patched версию python-for-android
-          pip install git+https://github.com/kivy/python-for-android.git@fix-libffi-build
-          pip install buildozer
+          pip install buildozer cython==0.29.36 kivy==2.3.0
 
       - name: Initialize Buildozer
         run: |
@@ -76,8 +72,10 @@ jobs:
           android.minapi = 21
           android.api = 34
           android.build_tools_version = 34.0.0
-          p4a.branch = fix-libffi-build
+          p4a.branch = master
           android.accept_sdk_license = True
+          # Решение проблемы с libffi
+          p4a.options = --use-system-libffi
           log_level = 2
           EOT
 
@@ -113,14 +111,9 @@ jobs:
         run: |
           export PATH=$PATH:$HOME/android-sdk/platform-tools
           
-          # Принудительно устанавливаем libffi
-          wget https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz
-          tar -xzf libffi-3.4.6.tar.gz
-          cd libffi-3.4.6
-          ./configure --disable-docs --prefix=/usr
-          make
-          sudo make install
-          cd ..
+          # Устанавливаем переменную для использования системного libffi
+          export CFLAGS="-I/usr/include -L/usr/lib"
+          export LDFLAGS="-L/usr/lib"
           
           buildozer -v android debug
           find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
