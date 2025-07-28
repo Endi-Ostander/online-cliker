@@ -41,12 +41,18 @@ jobs:
             autoconf \
             libtool \
             pkg-config \
-            wget
+            wget \
+            automake \
+            gettext
 
-      - name: Install Buildozer
+      - name: Install Buildozer with fixes
         run: |
           pip install --upgrade pip setuptools virtualenv
-          pip install buildozer cython==0.29.36 kivy==2.3.0
+          pip install cython==0.29.36 kivy==2.3.0
+          
+          # Устанавливаем patched версию python-for-android
+          pip install git+https://github.com/kivy/python-for-android.git@fix-libffi-build
+          pip install buildozer
 
       - name: Initialize Buildozer
         run: |
@@ -65,15 +71,14 @@ jobs:
           requirements = python3,kivy==2.3.0,requests
           orientation = portrait
           fullscreen = 0
-          # Используем новую опцию вместо устаревшей android.arch
           android.archs = arm64-v8a
           android.permissions = INTERNET
-          # Устаревшие параметры удалены
           android.minapi = 21
           android.api = 34
           android.build_tools_version = 34.0.0
-          p4a.branch = master
+          p4a.branch = fix-libffi-build
           android.accept_sdk_license = True
+          log_level = 2
           EOT
 
       - name: Install Android SDK
@@ -108,10 +113,16 @@ jobs:
         run: |
           export PATH=$PATH:$HOME/android-sdk/platform-tools
           
-          # Убираем clean, так как он вызывает ошибку
-          buildozer -v android debug
+          # Принудительно устанавливаем libffi
+          wget https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz
+          tar -xzf libffi-3.4.6.tar.gz
+          cd libffi-3.4.6
+          ./configure --disable-docs --prefix=/usr
+          make
+          sudo make install
+          cd ..
           
-          # Find and copy APK
+          buildozer -v android debug
           find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
 
       - name: Verify APK
@@ -123,7 +134,7 @@ jobs:
             echo "Listing build directory:"
             ls -la bin/ || true
             echo "Buildozer log:"
-            tail -n 100 buildozer.log || true
+            tail -n 500 buildozer.log || true
             exit 1
           fi
 
