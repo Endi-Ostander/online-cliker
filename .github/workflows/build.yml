@@ -75,35 +75,41 @@ jobs:
           mv tmp/cmdline-tools latest
           rm -rf tmp commandlinetools-linux-9477386_latest.zip
           
+          # Install platform tools and build tools
           yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-          ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          
+          # Create symlink for sdkmanager in expected location
+          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+          ln -s ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
           
           echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_ENV
+
+      - name: Install Apache ANT
+        run: |
+          mkdir -p ~/.buildozer/android/platform
+          cd ~/.buildozer/android/platform
+          wget -q https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.4-bin.tar.gz
+          tar xzf apache-ant-1.9.4-bin.tar.gz
+          rm apache-ant-1.9.4-bin.tar.gz
+          echo "PATH=$PATH:$HOME/.buildozer/android/platform/apache-ant-1.9.4/bin" >> $GITHUB_ENV
 
       - name: Setup Python-for-Android
         run: |
-          # Create the directory where buildozer expects p4a
           mkdir -p $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
           git clone https://github.com/kivy/python-for-android.git $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
           cd $GITHUB_WORKSPACE/.buildozer/android/platform/python-for-android
           git checkout develop
           pip install -e .
-          
-          # Also install in the global site-packages for good measure
-          pip install python-for-android
 
       - name: Build APK
         run: |
           export BUILD_DIR=$GITHUB_WORKSPACE
           export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
-          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_NDK_HOME
-          
-          # Ensure p4a is in the correct location
-          mkdir -p $BUILD_DIR/.buildozer/android/platform/python-for-android
-          [ -d "$BUILD_DIR/.buildozer/android/platform/python-for-android" ] || exit 1
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_NDK_HOME:$ANDROID_SDK_ROOT/platform-tools
           
           cd $BUILD_DIR
           buildozer -v android clean
