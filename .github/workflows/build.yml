@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     
     steps:
       - uses: actions/checkout@v4
@@ -88,27 +88,27 @@ jobs:
           
           # Set environment variables
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
 
       - name: Accept Android licenses
         run: |
+          # Use the direct path to sdkmanager
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
 
       - name: Install Android tools
         run: |
+          # Use the direct path to sdkmanager
           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
             "platform-tools" \
             "build-tools;34.0.0" \
             "platforms;android-34" \
-            "emulator" \
-            "patcher;v4"
+            "emulator"
 
       - name: Build APK
         run: |
           # Set environment variables for Buildozer
           export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export ANDROID_NDK_HOME=$HOME/android-sdk/ndk/25.2.9519653
+          export PATH=$PATH:$HOME/android-sdk/platform-tools
           
           # Run Buildozer
           buildozer android clean
@@ -123,6 +123,8 @@ jobs:
             echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
           else
             echo "APK generation failed!"
+            echo "Listing build directory:"
+            ls -la bin/ || true
             echo "Buildozer log:"
             tail -n 100 buildozer.log || true
             exit 1
