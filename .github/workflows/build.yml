@@ -57,39 +57,33 @@ jobs:
           log_level = 2
           EOT
 
-      - name: Setup Android environment
+      - name: Setup Android NDK
         run: |
-          # Create necessary directories
           mkdir -p ~/.buildozer/android/platform
-          
-          # Download and extract NDK
           cd ~/.buildozer/android/platform
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip -q android-ndk-r25b-linux.zip
           rm android-ndk-r25b-linux.zip
-          
-          # Setup SDK
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          cd ~/.buildozer/android/platform/android-sdk
+          echo "ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+
+      - name: Setup Android SDK
+        run: |
+          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
+          cd ~/.buildozer/android/platform/android-sdk/cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip
-          rm commandlinetools-linux-9477386_latest.zip
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/
+          unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
+          mv tmp/cmdline-tools latest
+          rm -rf tmp commandlinetools-linux-9477386_latest.zip
           
-          # Accept licenses and install components
           yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
           ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
           
-          # Set environment variables
           echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
 
       - name: Initialize python-for-android
         run: |
-          # Create p4a directory structure
           mkdir -p ~/.buildozer/android/platform/python-for-android
           git clone https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
           cd ~/.buildozer/android/platform/python-for-android
@@ -98,33 +92,30 @@ jobs:
 
       - name: Build APK
         run: |
-          # Set buildozer environment
           export BUILD_DIR=$GITHUB_WORKSPACE
           export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_NDK_HOME
           
-          # Build the APK
           cd $BUILD_DIR
           buildozer -v android clean
           buildozer -v android debug
           
-          # Check if APK was generated
           if ls bin/*.apk 1> /dev/null 2>&1; then
             cp bin/*.apk clicker-app.apk
           else
             echo "APK generation failed!"
-            echo "Buildozer log:"
             tail -n 200 buildozer.log
             exit 1
           fi
 
-      - name: Verify and optimize APK
+      - name: Optimize APK
         run: |
           if [ -f clicker-app.apk ]; then
-            echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
-            # Optimize APK
+            echo "APK size before optimization: $(du -h clicker-app.apk | cut -f1)"
             $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
             mv clicker-app-aligned.apk clicker-app.apk
+            echo "APK size after optimization: $(du -h clicker-app.apk | cut -f1)"
           else
             echo "No APK found to optimize!"
             exit 1
