@@ -17,7 +17,7 @@ jobs:
         run: |
           # Создаем временный Dockerfile
           cat <<EOT > Dockerfile
-          FROM kivy/buildozer:latest
+          FROM kivy/buildozer:stable
 
           # Копируем исходный код
           COPY . /app
@@ -25,7 +25,7 @@ jobs:
 
           # Устанавливаем зависимости Python
           RUN pip install requests kivy==2.3.0
-
+          
           # Создаем buildozer.spec
           RUN echo "\
           [app]\n\
@@ -49,12 +49,12 @@ jobs:
 
           # Собираем и запускаем контейнер
           docker build -t kivy-builder .
-          docker run --rm -v $PWD:/host kivy-builder sh -c "cp bin/*.apk /host/clicker-app.apk"
+          docker run --rm -v \$PWD:/host kivy-builder sh -c "cp bin/*.apk /host/clicker-app.apk"
 
       - name: Verify APK
         run: |
           if [ -f clicker-app.apk ]; then
-            echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
+            echo "APK generated successfully (\$(du -h clicker-app.apk | cut -f1))"
           else
             echo "APK generation failed!"
             exit 1
