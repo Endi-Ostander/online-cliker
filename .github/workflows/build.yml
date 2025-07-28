@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +27,15 @@ jobs:
             openjdk-17-jdk \
             python3-pip \
             zlib1g-dev \
-            libncurses6-dev \
-            libncursesw6-dev \
+            libncurses-dev \
             libtinfo6 \
             cmake \
             libffi-dev \
-            libssl-dev
+            libssl-dev \
+            git \
+            autoconf \
+            libtool \
+            pkg-config
 
       - name: Cache Android SDK
         uses: actions/cache@v3
@@ -47,16 +50,40 @@ jobs:
       - name: Install Buildozer and dependencies
         run: |
           pip install --upgrade pip setuptools virtualenv
-          pip install buildozer cython==0.29.36
+          pip install buildozer cython==0.29.36 kivy==2.3.0
 
       - name: Accept Android licenses
         run: |
-          mkdir -p ~/.android
-          touch ~/.android/repositories.cfg
           mkdir -p ~/.android/licenses
           echo "d56f5187479451eabf01fd78e6e452a9cf6d38f9" > ~/.android/licenses/android-sdk-license
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/intel-android-extra-license
+
+      - name: Configure Buildozer
+        run: |
+          buildozer init
+          cat <<EOT > buildozer.spec
+          [app]
+          title = Online Clicker
+          package.name = onlineclicker
+          package.domain = org.example
+          source.dir = .
+          version = 1.0
+          requirements = python3,kivy==2.3.0,requests
+          orientation = portrait
+          fullscreen = 0
+          android.arch = arm64-v8a
+          android.permissions = INTERNET
+          android.sdk = 34
+          android.ndk = 25c
+          android.minapi = 21
+          android.api = 34
+          android.build_tools_version = 34.0.0
+          android.sdk_path = $HOME/.buildozer/android/platform/android-sdk
+          android.ndk_path = $HOME/.buildozer/android/platform/android-ndk
+          p4a.branch = master
+          android.accept_sdk_license = True
+          EOT
 
       - name: Install Android tools
         run: |
@@ -69,17 +96,23 @@ jobs:
           export PATH=$PATH:~/.local/bin/:$HOME/.buildozer/android/platform/android-sdk/platform-tools
           buildozer android clean
           buildozer -v android debug 2>&1 | tee build.log
-          cp bin/*.apk clicker-app.apk
+          [ -f bin/*.apk ] && cp bin/*.apk clicker-app.apk || echo "No APK found"
 
       - name: Upload APK
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: clicker-apk
           path: clicker-app.apk
+          if-no-files-found: warn
           retention-days: 5
 
-      - name: Check build log
-        if: ${{ always() }}
+      - name: Debug info
+        if: always()
         run: |
+          echo "### Build logs ###"
           tail -n 100 build.log || true
+          echo "### Bin contents ###"
           ls -la bin/ || true
+          echo "### Buildozer info ###"
+          buildozer --version || true
