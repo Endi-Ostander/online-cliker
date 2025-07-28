@@ -50,7 +50,6 @@ jobs:
           android.permissions = INTERNET
           android.minapi = 21
           android.api = 34
-          # Используем рекомендованные версии
           android.ndk = 25b
           p4a.branch = master
           android.accept_sdk_license = True
@@ -62,26 +61,29 @@ jobs:
           mkdir -p ~/.buildozer/android/platform
           cd ~/.buildozer/android/platform
           
-          # Скачиваем NDK напрямую
-          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip android-ndk-r25b-linux.zip
-          mv android-ndk-r25b android-ndk-r25b
+          # Download and extract NDK
+          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip
           rm android-ndk-r25b-linux.zip
           
-          # Устанавливаем переменные окружения
-          echo "ANDROID_NDK_HOME=~/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
-          echo "NDK_HOME=~/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+          # Set environment variables
+          echo "ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+          echo "NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
 
       - name: Build APK
         run: |
-          # Устанавливаем переменные для Buildozer
-          export ANDROID_SDK_ROOT=~/.buildozer/android/platform/android-sdk
-          export ANDROID_NDK_HOME=~/.buildozer/android/platform/android-ndk-r25b
+          # Set variables for Buildozer
+          export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+          export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
+          export PATH=$PATH:$ANDROID_NDK_HOME
           
+          # Build the APK
           buildozer -v android clean
           buildozer -v android debug
           
-          if [ -f bin/*.apk ]; then
+          # Check if APK was generated
+          if ls bin/*.apk 1> /dev/null 2>&1; then
             cp bin/*.apk clicker-app.apk
           else
             echo "APK generation failed!"
@@ -94,10 +96,11 @@ jobs:
         run: |
           if [ -f clicker-app.apk ]; then
             echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
-            # Оптимизируем APK
+            # Optimize APK
             zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
             mv clicker-app-aligned.apk clicker-app.apk
           else
+            echo "No APK found to optimize!"
             exit 1
           fi
 
