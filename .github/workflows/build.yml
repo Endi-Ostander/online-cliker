@@ -43,7 +43,8 @@ jobs:
             pkg-config \
             wget \
             automake \
-            gettext
+            gettext \
+            patchelf
 
       - name: Install Buildozer
         run: |
@@ -72,10 +73,10 @@ jobs:
           android.minapi = 21
           android.api = 34
           android.build_tools_version = 34.0.0
-          p4a.branch = master
+          p4a.branch = develop
           android.accept_sdk_license = True
           # Решение проблемы с libffi
-          p4a.options = --use-system-libffi
+          p4a.options = --ignore-setup-py --sdk-dir=$HOME/android-sdk --ndk-dir=$HOME/android-sdk/ndk/25.2.9519653
           log_level = 2
           EOT
 
@@ -111,9 +112,18 @@ jobs:
         run: |
           export PATH=$PATH:$HOME/android-sdk/platform-tools
           
-          # Устанавливаем переменную для использования системного libffi
-          export CFLAGS="-I/usr/include -L/usr/lib"
-          export LDFLAGS="-L/usr/lib"
+          # Явное указание путей для Python-for-Android
+          export ANDROIDSDK="$HOME/android-sdk"
+          export ANDROIDNDK="$HOME/android-sdk/ndk/25.2.9519653"
+          
+          # Скачивание и установка libffi 3.3
+          wget https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz
+          tar xzf libffi-3.3.tar.gz
+          cd libffi-3.3
+          ./configure --prefix=/usr --disable-docs
+          make
+          sudo make install
+          cd ..
           
           buildozer -v android debug
           find bin/ -name '*.apk' -exec cp {} clicker-app.apk \;
@@ -122,6 +132,9 @@ jobs:
         run: |
           if [ -f clicker-app.apk ]; then
             echo "APK generated successfully ($(du -h clicker-app.apk | cut -f1))"
+            # Оптимизация APK
+            zipalign -v 4 clicker-app.apk clicker-app-aligned.apk
+            mv clicker-app-aligned.apk clicker-app.apk
           else
             echo "APK generation failed!"
             echo "Listing build directory:"
