@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     
     steps:
@@ -27,9 +27,9 @@ jobs:
             openjdk-17-jdk \
             python3-pip \
             zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libtinfo5 \
+            libncurses6-dev \
+            libncursesw6-dev \
+            libtinfo6 \
             cmake \
             libffi-dev \
             libssl-dev
@@ -53,6 +53,7 @@ jobs:
         run: |
           mkdir -p ~/.android
           touch ~/.android/repositories.cfg
+          mkdir -p ~/.android/licenses
           echo "d56f5187479451eabf01fd78e6e452a9cf6d38f9" > ~/.android/licenses/android-sdk-license
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/intel-android-extra-license
@@ -60,7 +61,7 @@ jobs:
       - name: Install Android tools
         run: |
           export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-          yes | sdkmanager --install "build-tools;34.0.0" "platform-tools" "platforms;android-34"
+          yes | sdkmanager --install "build-tools;34.0.0" "platform-tools" "platforms;android-34" "cmdline-tools;latest"
           sdkmanager --update
 
       - name: Build APK
