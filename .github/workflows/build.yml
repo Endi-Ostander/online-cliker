@@ -54,9 +54,10 @@ jobs:
           fullscreen = 0
           android.archs = arm64-v8a
           android.permissions = INTERNET
-          android.minapi = 21
+          android.minapi = 33
           android.api = 34
           android.ndk = 25b
+          android.debug = 0
           p4a.branch = develop
           android.accept_sdk_license = True
           log_level = 2
@@ -79,14 +80,14 @@ jobs:
           unzip -q commandlinetools-linux-9477386_latest.zip -d tmp
           mv tmp/cmdline-tools latest
           rm -rf tmp commandlinetools-linux-9477386_latest.zip
-          
+
           # Fix sdkmanager path
           mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
           ln -s ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-          
+
           yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
           ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          
+
           echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
           echo "PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_ENV
@@ -108,11 +109,11 @@ jobs:
           export BUILD_DIR=$GITHUB_WORKSPACE
           export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
-          
+
           cd $BUILD_DIR
           buildozer -v android clean
-          buildozer -v android debug
-          
+          buildozer -v android release
+
           if ls bin/*.apk 1> /dev/null 2>&1; then
             cp bin/*.apk clicker-app.apk
           else
@@ -129,3 +130,4 @@ jobs:
           path: clicker-app.apk
           if-no-files-found: error
           retention-days: 5
+
